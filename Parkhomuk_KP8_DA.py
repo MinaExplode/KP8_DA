@@ -7,9 +7,18 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score
 
 # Заголовок и описание
-st.title("INC 5000 Companies Analysis Dashboard")
-st.write("Цей додаток дозволяє аналізувати дані про 5000 найшвидше зростаючих приватних компаній США за 2014 рік. \
-Використовуйте панель фільтрів для налаштування перегляду.")
+st.set_page_config(
+    page_title="INC 5000 Companies Analysis Dashboard",
+    page_icon="📊",
+    layout="wide",
+    initial_sidebar_state="expanded",
+    menu_items={
+        'Get Help': 'https://docs.streamlit.io/',
+        'Report a bug': 'https://github.com/streamlit/streamlit/issues',
+        'About': 'Цей додаток дозволяє аналізувати дані про 5000 найшвидше зростаючих приватних компаній США за 2014 рік. \
+Використовуйте панель фільтрів для налаштування перегляду.'
+    }
+)
 
 # Завантаження даних
 @st.cache_data
@@ -22,10 +31,25 @@ def load_data():
 df = load_data()
 
 # Фільтри
-industry = st.selectbox("Оберіть індустрію", sorted(df["industry"].unique()))
-states = st.multiselect("Оберіть штати", sorted(df["state_l"].unique()), default=["California", "Texas"])
-revenue_filter = st.radio("Діапазон виручки", ["Всі", "Менше 10М", "Від 10М до 100М", "Більше 100М"])
-growth_checkbox = st.checkbox("Показати лише компанії з ростом > 500%")
+st.sidebar.title("Панель фільтрації")
+
+industry = st.sidebar.selectbox("Оберіть індустрію", sorted(df["industry"].unique()))
+states = st.sidebar.multiselect("Оберіть штати", sorted(df["state_l"].unique()), default=["California", "Texas"])
+revenue_filter = st.sidebar.radio("Діапазон виручки", ["Всі", "Менше 10М", "Від 10М до 100М", "Більше 100М"])
+growth_checkbox = st.sidebar.checkbox("Показати лише компанії з ростом > 500%")
+chart_option = st.sidebar.radio(
+    "📈 Оберіть графік для перегляду:",
+    [
+        "Гістограма росту",
+        "Boxplot виручки по штатам",
+        "Scatterplot росту проти виручки"
+    ]
+)
+
+# Інформаційний блок
+st.sidebar.markdown("---")
+st.sidebar.markdown(" **Інструкція**: \nФільтруйте дані за параметрами і переглядайте графіки та таблиці на панелі праворуч.")
+st.sidebar.markdown(" **Автор**: Parkhomuk Amina")
 
 # Застосування фільтрів
 filtered_df = df[df["industry"] == industry]
@@ -50,43 +74,56 @@ st.dataframe(filtered_df[columns_to_show])
 st.subheader("Графічне представлення даних")
 
 # 1: Гістограма росту
-fig1, ax1 = plt.subplots()
-sns.histplot(filtered_df["growth"], bins=30, ax=ax1)
-ax1.set_title("Розподіл росту компаній")
-st.pyplot(fig1)
+if chart_option == " Гістограма росту":
+    fig1, ax1 = plt.subplots()
+    sns.histplot(filtered_df["growth"], bins=30, ax=ax1)
+    ax1.set_title("Розподіл росту компаній")
+    st.pyplot(fig1)
 
 # 2: Boxplot виручки по штатам
-fig2, ax2 = plt.subplots()
-sns.boxplot(x="state_l", y="revenue", data=filtered_df, ax=ax2)
-ax2.set_title("Виручка по штатам")
-ax2.tick_params(axis='x', rotation=90)
-st.pyplot(fig2)
+if chart_option == "Boxplot виручки по штатам":
+    fig2, ax2 = plt.subplots()
+    sns.boxplot(x="state_l", y="revenue", data=filtered_df, ax=ax2)
+    ax2.set_title("Виручка по штатам")
+    ax2.tick_params(axis='x', rotation=90)
+    st.pyplot(fig2)
 
 # 3: Scatterplot росту проти виручки
-fig3, ax3 = plt.subplots()
-sns.scatterplot(x="growth", y="revenue", hue="industry", data=filtered_df, ax=ax3)
-ax3.set_title("Залежність росту і виручки по індустріях")
-st.pyplot(fig3)
+if chart_option == "Scatterplot росту проти виручки":
+    fig3, ax3 = plt.subplots()
+    sns.scatterplot(x="growth", y="revenue", hue="industry", data=filtered_df, ax=ax3)
+    ax3.set_title("Залежність росту і виручки по індустріях")
+    st.pyplot(fig3)
 
-# Регресійна модель
-st.subheader("Лінійна регресія: прогноз виручки за ростом")
+# --- Блок побудови регресії за вибором користувача ---
+st.sidebar.markdown("### Побудова регресії")
+numeric_columns = df.select_dtypes(include=["float64", "int64"]).columns.tolist()
 
-X = filtered_df[["growth"]]
-y = filtered_df["revenue"]
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
-model = LinearRegression()
-model.fit(X_train, y_train)
-y_pred = model.predict(X_test)
+reg_x = st.sidebar.selectbox("Оберіть змінну X (незалежна)", numeric_columns, index=0)
+reg_y = st.sidebar.selectbox("Оберіть змінну Y (залежна)", numeric_columns, index=1)
+show_regression = st.sidebar.checkbox("Показати регресійну модель")
 
-score = r2_score(y_test, y_pred)
-st.write(f"R² score моделі: {score:.2f}")
+if show_regression:
+    st.subheader(f"📈 Лінійна регресія: {reg_y} ~ {reg_x}")
+    df_reg = df[[reg_x, reg_y]].dropna()
 
-# Візуалізація регресії
-fig4, ax4 = plt.subplots()
-ax4.scatter(X_test, y_test, label="Фактичні значення")
-ax4.plot(X_test, y_pred, color="red", label="Прогноз")
-ax4.set_xlabel("Growth")
-ax4.set_ylabel("Revenue")
-ax4.set_title("Прогноз виручки по росту")
-ax4.legend()
-st.pyplot(fig4)
+    if df_reg.shape[0] >= 2:
+        model = LinearRegression()
+        model.fit(df_reg[[reg_x]], df_reg[reg_y])
+        y_pred = model.predict(df_reg[[reg_x]])
+
+        coef = model.coef_[0]
+        intercept = model.intercept_
+        r2 = model.score(df_reg[[reg_x]], df_reg[reg_y])
+
+        st.markdown(f"**Коефіцієнт нахилу (β):** {coef:.4f}")
+        st.markdown(f"**Зсув (intercept):** {intercept:.4f}")
+        st.markdown(f"**R²:** {r2:.4f}")
+
+        fig, ax = plt.subplots(figsize=(8, 5))
+        sns.scatterplot(data=df_reg, x=reg_x, y=reg_y, ax=ax)
+        sns.lineplot(x=df_reg[reg_x], y=y_pred, color='red', ax=ax)
+        ax.set_title(f"Регресія {reg_y} ~ {reg_x}")
+        st.pyplot(fig)
+    else:
+        st.warning("Недостатньо даних для побудови регресії.")
