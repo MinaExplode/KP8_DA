@@ -43,7 +43,6 @@ chart_option = st.sidebar.radio(
     "📈 Оберіть графік для перегляду:",
     [
         "Дохід проти зростання",
-        "Гістограма росту",
         "Boxplot виручки по штатам",
         "Scatterplot росту проти виручки"
     ]
@@ -91,14 +90,7 @@ if chart_option == "Дохід проти зростання":
     )
     st.altair_chart(chart, use_container_width=True)
 
-# 2: Гістограма росту
-if chart_option == " Гістограма росту":
-    st.subheader("📊 Розподіл росту компаній")
-    fig1, ax1 = plt.subplots()
-    sns.histplot(filtered_df["growth"], bins=30, ax=ax1)
-    st.pyplot(fig1)
-
-# 3: Boxplot виручки по штатам
+# 2: Boxplot виручки по штатам
 if chart_option == "Boxplot виручки по штатам":
     st.subheader("📊 Виручка по штатам")
     fig2, ax2 = plt.subplots()
@@ -106,7 +98,7 @@ if chart_option == "Boxplot виручки по штатам":
     ax2.tick_params(axis='x', rotation=90)
     st.pyplot(fig2)
 
-# 4: Scatterplot росту проти виручки
+# 3: Scatterplot росту проти виручки
 if chart_option == "Scatterplot росту проти виручки":
     st.subheader("📊 Залежність росту і виручки по індустріях")
     fig3, ax3 = plt.subplots()
