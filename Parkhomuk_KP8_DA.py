@@ -25,7 +25,7 @@ st.set_page_config(
 # Завантаження даних
 @st.cache_data
 def load_data():
-    df = pd.read_csv("Data Set- Inc5000 Company List_2014.csv")
+    df = pd.read_csv("data.csv")
     df = df.drop(columns=["_input", "_num", "_widgetName", "_source", "_resultNumber", "_pageUrl", "id", "url"])
     df = df.dropna()
     return df
